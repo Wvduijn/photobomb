@@ -2,10 +2,11 @@
 // db uri: mongodb://<dbuser>:<dbpassword>@ds233763.mlab.com:33763/vue-photobomb
 
 // Imports
-const { ApolloServer } = require('apollo-server');
+const { ApolloServer, AuthenticationError } = require('apollo-server');
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 
 // Import typedefs and resolvers
 const filePath = path.join(__dirname, 'typeDefs.gql');
@@ -24,13 +25,25 @@ mongoose
     .then(() => console.log('DB connected'))
     .catch(err => console.error(err));
 
+// Verify JWT token passed from client
+const getUser = async token => {
+    if (token){
+        try {
+            return await jwt.verify(token, process.env.SECRET);
+        } catch(err) {
+            throw new AuthenticationError('Your session has ended. Please sign in again')
+        }
+    }
+}
+
 // Create Apollo/GraphQL Server using Typedefs, Resolvers and context Object
 const server = new ApolloServer({
     typeDefs,
     resolvers,
-    context: {
-        User,
-        Post
+    formatError: (error) => ({ name: error.name, message: error.message.replace('Context creation failed:', '') }),
+    context: async ({ req }) =>  {
+        const token = req.headers['authorization'];
+        return { User, Post, currentUser: await getUser(token) };
     }
 });
 
