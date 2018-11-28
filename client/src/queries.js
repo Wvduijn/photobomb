@@ -7,6 +7,7 @@ export const GET_POSTS = gql`
       _id
       title
       imageUrl
+      description
     }
   }
 `;
@@ -74,6 +75,32 @@ export const INFINITE_SCROLL_POSTS = gql`
           username
           avatar
         }
+      }
+    }
+  }
+`;
+
+export const LIKE_POST = gql `
+  mutation($postId: ID!, $username: String!) {
+    likePost(postId: $postId, username: $username) {
+      likes
+      favorites {
+        _id
+        title
+        imageUrl
+      }
+    }
+  }
+`;
+
+export const UNLIKE_POST = gql `
+  mutation($postId: ID!, $username: String!) {
+    unlikePost(postId: $postId, username: $username) {
+      likes
+      favorites {
+        _id
+        title
+        imageUrl
       }
     }
   }
