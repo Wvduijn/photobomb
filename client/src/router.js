@@ -40,7 +40,7 @@ export default new Router({
       beforeEnter: AuthGuard
     },
     {
-      path: '/profiel',
+      path: '/profile',
       name: 'Profile',
       component: Profile,
       beforeEnter: AuthGuard

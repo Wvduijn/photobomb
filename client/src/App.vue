@@ -39,8 +39,26 @@
       <v-spacer></v-spacer>
 
       <!--search Input -->
-      <v-text-field flex prepend-icon="search" placeholder="Zoek naar posts..." color="secondary" single-line></v-text-field>
+      <v-text-field v-model="searchTerm" @input="handleSearchPosts" flex prepend-icon="search" placeholder="Zoek naar posts..." color="secondary" single-line></v-text-field>
       <v-spacer></v-spacer>
+
+      <!-- Search Results card -->
+      <!-- Search Results Card -->
+      <v-card dark v-if="searchResults.length" id="search__card">
+        <v-list>
+          <v-list-tile v-for="result in searchResults" :key="result._id" @click="goToSearchResult(result._id)">
+            <v-list-tile-title>
+              {{result.title}} -
+              <span class="font-weight-thin">{{formatDescription(result.description)}}</span>
+            </v-list-tile-title>
+
+            <!-- Show Icon if Result Favorited by User -->
+            <v-list-tile-action v-if="checkIfUserFavorite(result._id)">
+              <v-icon>favorite</v-icon>
+            </v-list-tile-action>
+          </v-list-tile>
+        </v-list>
+      </v-card>
 
       <!-- Horizontal Navbar Links -->
       <v-toolbar-items class="hidden-xs-only">
@@ -52,9 +70,9 @@
         <!-- Profile Button -->
         <v-btn flat to="/profile" v-if="user">
           <v-icon class="hidden-sm-only" left>account_box</v-icon>
-          <v-badge right color="blue darken-2">
-            <!-- <span slot="badge"></span> -->
-            Profiel
+         <v-badge right color="blue darken-2" :class="{ 'bounce': badgeAnimated }">
+            <span slot="badge" v-if="userFavorites.length">{{userFavorites.length}}</span>
+            Profile
           </v-badge>
         </v-btn>
 
@@ -97,73 +115,112 @@
 import { mapGetters } from 'vuex';
 
 export default {
-  name: "App",
+  name: 'App',
   data() {
     return {
+      searchTerm: '',
       sideNav: false,
       authSnackbar: false,
-      authErrorSnackbar: false
-    }
+      authErrorSnackbar: false,
+      badgeAnimated: false
+    };
   },
   watch: {
-    user(newValue ,oldValue) {
-      // if we had no value for user before show the snackbar
-      if( oldValue === null){
+    user(newValue, oldValue) {
+      // if we had no value for user before, show snackbar
+      if (oldValue === null) {
         this.authSnackbar = true;
       }
     },
     authError(value) {
-      // if auth error is not null show authError snackbar
+      // if auth error is not null, show auth error snackbar
       if (value !== null) {
         this.authErrorSnackbar = true;
+      }
+    },
+    userFavorites(value) {
+      // if user favorites value changed at all
+      if (value) {
+        this.badgeAnimated = true;
+        setTimeout(() => (this.badgeAnimated = false), 1000);
       }
     }
   },
   computed: {
-    ...mapGetters(['user', 'authError']),
+    ...mapGetters(['authError', 'user', 'userFavorites', 'searchResults']),
     horizontalNavItems() {
       let items = [
-        { icon: "chat", title: "Posts", link: "/posts" },
-        { icon: "lock_open", title: "Inloggen", link: "/inloggen" },
-        { icon: "create", title: "Registreren", link: "/registreren" }
+        { icon: 'chat', title: 'Posts', link: '/posts' },
+        { icon: 'lock_open', title: 'Inloggen', link: '/inloggen' },
+        { icon: 'create', title: 'Registreren', link: '/registreren' }
       ];
       if (this.user){
         items = [
-          { icon: "chat", title: "Posts", link: "/posts" },
+          { icon: 'chat', title: 'Posts', link: '/posts' },
         ]
       }
       return items;
     },
     sideNavItems() {
       let items = [
-        { icon: "chat", title: "Posts", link: "/posts" },
-        { icon: "lock_open", title: "Inloggen", link: "/inloggen" },
-        { icon: "create", title: "Registreren", link: "/registreren" }
+        { icon: 'chat', title: 'Posts', link: '/posts' },
+        { icon: 'lock_open', title: 'Inloggen', link: '/inloggen' },
+        { icon: 'create', title: 'Registreren', link: '/registreren' }
       ];
 
       if (this.user) {
         items = [
-          { icon: "chat", title: "Posts", link: "/posts" },
-          { icon: "stars", title: "Create Post", link: "/post/toevoegen" },
-          { icon: "create", title: "Profile", link: "/profiel" }
+          { icon: 'chat', title: 'Posts', link: '/posts' },
+          { icon: 'stars', title: 'Create Post', link: '/post/toevoegen' },
+          { icon: 'create', title: 'Profile', link: '/profiel' }
         ];
       }
       return items;
     }
   },
   methods: {
-    toggleSideNav(){
-      this.sideNav = !this.sideNav
+   handleSearchPosts() {
+      this.$store.dispatch('searchPosts', {
+        searchTerm: this.searchTerm
+      });
     },
     handleSignoutUser() {
-      this.$store.dispatch("signoutUser");
+      this.$store.dispatch('signoutUser');
     },
+    goToSearchResult(resultId) {
+      // Clear search term
+      this.searchTerm = '';
+      // Go to desired result
+      this.$router.push(`/posts/${resultId}`);
+      // Clear search results
+      this.$store.commit('clearSearchResults');
+    },
+    formatDescription(desc) {
+      return desc.length > 30 ? `${desc.slice(0, 30)}...` : desc;
+    },
+    checkIfUserFavorite(resultId) {
+      return (
+        this.userFavorites &&
+        this.userFavorites.some(fave => fave._id === resultId)
+      );
+    },
+    toggleSideNav() {
+      this.sideNav = !this.sideNav;
+    }
   }
 };
 </script>
 
 
-<style lang="scss">
+<style>
+h1 {
+  font-weight: 400;
+  font-size: 2.5rem;
+}
+h2 {
+  font-weight: 400;
+  font-size: 2rem;
+}
 .fade-enter-active,
 .fade-leave-active {
   transition-property: opacity;
@@ -178,4 +235,39 @@ export default {
 .fade-leave-active {
   opacity: 0;
 }
+
+/* Search Results Card */
+#search__card {
+  position: absolute;
+  width: 100vw;
+  z-index: 8;
+  top: 100%;
+  left: 0%;
+}
+
+/* User Favorite Animation */
+.bounce {
+  animation: bounce 1s both;
+}
+
+@keyframes bounce {
+  0%,
+  20%,
+  53%,
+  80%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  40%,
+  43% {
+    transform: translate3d(0, -20px, 0);
+  }
+  70% {
+    transform: translate3d(0, -10px, 0);
+  }
+  90% {
+    transform: translate3d(0, -4px, 0);
+  }
+}
 </style>
+
